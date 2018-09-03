@@ -1,0 +1,7 @@
+<resources>
+  <string name="app_name">LoginMvi</string>
+  <string name="username">username</string>
+  <string name="password">password</string>
+  <string name="submit">Submit</string>
+  <string name="user_id_is">User Id is: %s</string>
+</resources>

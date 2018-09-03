@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    >
+
+  <EditText
+      android:id="@+id/username_et"
+      android:hint="@string/username"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:inputType="none"
+      />
+  <EditText
+      android:id="@+id/password_et"
+      android:hint="@string/password"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:inputType="textWebPassword"
+      />
+
+  <TextView
+      android:id="@+id/error_message_tv"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:textColor="@android:color/holo_red_dark"
+      tools:text="error logging in"
+      android:gravity="center"
+      />
+  <ProgressBar
+      android:id="@+id/progress_pb"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_gravity="center_horizontal"
+      android:visibility="gone"
+      tools:visibility="visible"
+      />
+  <Button
+      android:id="@+id/submit_btn"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:text="@string/submit"
+      android:enabled="false"
+      />
+
+</LinearLayout>
