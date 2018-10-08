@@ -19,6 +19,7 @@ import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.functions.BiFunction
 import io.reactivex.rxkotlin.plusAssign
 import io.reactivex.rxkotlin.subscribeBy
+import kotlinx.android.synthetic.main.controller_login.view.current_time_tv
 import kotlinx.android.synthetic.main.controller_login.view.error_message_tv
 import kotlinx.android.synthetic.main.controller_login.view.password_et
 import kotlinx.android.synthetic.main.controller_login.view.progress_pb
@@ -63,7 +64,9 @@ class LoginController : Controller() {
     compositeDisposable += view.getUpdateCredentialsIntentStream()
         .subscribeBy(
             onNext = { intentRelay.accept(it) },
-            onError = { Log.e(TAG, "Error in login example username/password text changes", it) }
+            onError = {
+              Log.e(TAG, "Error in login example username/password text changes", it)
+            }
         )
     compositeDisposable += viewStateStream
         .observeOn(AndroidSchedulers.mainThread())
@@ -100,6 +103,8 @@ class LoginController : Controller() {
     password_et.isEnabled = viewState.isPasswordFieldEnabled
 
     error_message_tv.setTextOrHide(viewState.errorMessageOption)
+
+    current_time_tv.setTextOrHide(viewState.currentTimeStringOption)
 
     submit_btn.setOnClickListener {
       viewState.submitButtonIntentOption.forSome { intentRelay.accept(it) }

@@ -7,6 +7,7 @@ import com.yohaq.loginmvi.api.UserInfo
 import com.yohaq.loginmvi.common.di.scopes.ApplicationScope
 import com.yohaq.loginmvi.common.toSingle
 import com.yohaq.loginmvi.data.AuthenticationRepository
+import com.yohaq.loginmvi.data.DateTimeRepository
 import dagger.Component
 import dagger.Module
 import dagger.Provides
@@ -20,6 +21,7 @@ import java.util.concurrent.TimeUnit
 @ApplicationScope
 interface DataComponent {
   val authenticationRepository: AuthenticationRepository
+  val dateTimeRepository: DateTimeRepository
 }
 
 @Module

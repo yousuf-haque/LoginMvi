@@ -1,6 +1,9 @@
 package com.yohaq.loginmvi.presentation.login
 
+import arrow.core.Option
 import arrow.core.Try
+import arrow.core.none
+import arrow.core.some
 import com.yohaq.loginmvi.api.HttpException
 import com.yohaq.loginmvi.api.LoginRequest
 import com.yohaq.loginmvi.api.UserInfo
@@ -15,23 +18,27 @@ import com.yohaq.loginmvi.presentation.login.LoginState.Submitting
 import io.reactivex.Completable
 import io.reactivex.Observable
 import io.reactivex.Single
+import java.util.Date
 
 sealed class LoginState {
 
   data class Entering(
     val username: String,
-    val password: String
+    val password: String,
+    val currentTime: Option<Date>
   ) : LoginState()
 
   data class Submitting(
     val username: String,
-    val password: String
+    val password: String,
+    val currentTime: Option<Date>
   ) : LoginState()
 
   data class Error(
     val username: String,
     val password: String,
-    val error: LoginError
+    val error: LoginError,
+    val currentTime: Option<Date>
   ) : LoginState()
 
   enum class LoginError {
@@ -44,14 +51,18 @@ sealed class LoginState {
 fun buildLoginStateStream(
   intentStream: Observable<LoginIntent>,
   loginRequestBuilder: (LoginRequest) -> Single<Try<UserInfo>>,
+  currentTimeStream: Observable<Date>,
   buildGoToLoggedInCompletable: (userId: String) -> Completable
 ): Observable<LoginState> {
   val initialState = Entering(
       username = "",
-      password = ""
+      password = "",
+      currentTime = none()
   )
 
-  val reducerStream: Observable<LoginExampleStateReducer> = intentStream.flatMap {
+  val updateTimeReducerStream = getCurrentTimeReducerStream(currentTimeStream)
+
+  val intentReducerStream = intentStream.flatMap {
     getIntentReducerStream(
         it,
         loginRequestBuilder,
@@ -59,11 +70,25 @@ fun buildLoginStateStream(
     )
   }
 
+  val reducerStream: Observable<LoginExampleStateReducer> = Observable.merge(intentReducerStream, updateTimeReducerStream)
+
   return reducerStream.scan(
       initialState
   ) { oldState: LoginState, reducer: LoginExampleStateReducer ->
     val newState = reducer(oldState)
     newState
+  }
+}
+
+fun getCurrentTimeReducerStream(currentTimeStream: Observable<Date>): Observable<LoginExampleStateReducer> {
+  return currentTimeStream.map { date ->
+    { oldState: LoginState ->
+      when(oldState){
+        is LoginState.Entering -> oldState.copy(currentTime = date.some())
+        is LoginState.Submitting -> oldState.copy(currentTime = date.some())
+        is LoginState.Error -> oldState.copy(currentTime = date.some())
+      }
+    }
   }
 }
 
@@ -97,17 +122,20 @@ fun buildSubmitLoginRequestReducerStream(
         is Entering -> Error(
             username = intent.username,
             password = intent.password,
-            error = if (throwable is HttpException && throwable.code == 400) IncorrectCredentials else NetworkError
+            error = if (throwable is HttpException && throwable.code == 400) IncorrectCredentials else NetworkError,
+            currentTime = oldState.currentTime
         )
         is Submitting -> Error(
             username = intent.username,
             password = intent.password,
-            error = if (throwable is HttpException && throwable.code == 400) IncorrectCredentials else NetworkError
+            error = if (throwable is HttpException && throwable.code == 400) IncorrectCredentials else NetworkError,
+            currentTime = oldState.currentTime
         )
         is Error -> Error(
             username = intent.username,
             password = intent.password,
-            error = if (throwable is HttpException && throwable.code == 400) IncorrectCredentials else NetworkError
+            error = if (throwable is HttpException && throwable.code == 400) IncorrectCredentials else NetworkError,
+            currentTime = oldState.currentTime
         )
       }
     }
@@ -119,12 +147,14 @@ fun buildSubmitLoginRequestReducerStream(
       is Entering ->
         Submitting(
             username = intent.username,
-            password = intent.password
+            password = intent.password,
+            currentTime = oldState.currentTime
         )
       is Submitting -> oldState
       is Error -> Submitting(
           username = intent.username,
-          password = intent.password
+          password = intent.password,
+          currentTime = oldState.currentTime
       )
     }
   }
@@ -135,8 +165,8 @@ fun buildSubmitLoginRequestReducerStream(
           password = intent.password
       )
   )
-      .flatMapObservable {
-        it.fold(
+      .flatMapObservable { loginResult ->
+        loginResult.fold(
             ifFailure = { getOnErrorStateReducer(it).just() },
             ifSuccess = {
               buildGoToLoggedInCompletable(
@@ -163,7 +193,8 @@ fun getUpdateCredentialsReducerStream(updateCredentialsIntent: UpdateCredentials
       is Error ->
         Entering(
             username = updateCredentialsIntent.username,
-            password = updateCredentialsIntent.password
+            password = updateCredentialsIntent.password,
+            currentTime = oldState.currentTime
         )
     }
   }

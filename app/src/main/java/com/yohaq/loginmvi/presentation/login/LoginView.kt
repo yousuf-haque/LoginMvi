@@ -9,6 +9,7 @@ import com.yohaq.loginmvi.presentation.login.LoginState.Error
 import com.yohaq.loginmvi.presentation.login.LoginState.LoginError.IncorrectCredentials
 import com.yohaq.loginmvi.presentation.login.LoginState.LoginError.NetworkError
 import com.yohaq.loginmvi.presentation.login.LoginState.Submitting
+import java.util.Date
 
 data class LoginViewState(
   val username: String,
@@ -19,7 +20,8 @@ data class LoginViewState(
   val isSubmitButtonEnabled: Boolean,
   val submitButtonCopy: String,
   val errorMessageOption: Option<String>,
-  val submitButtonIntentOption: Option<LoginIntent>
+  val submitButtonIntentOption: Option<LoginIntent>,
+  val currentTimeStringOption: Option<String>
 )
 
 fun LoginState.render(): LoginViewState {
@@ -32,9 +34,20 @@ fun LoginState.render(): LoginViewState {
       isSubmitButtonEnabled = isSubmitButtonEnabled(),
       errorMessageOption = getErrorMessageOpton(),
       isProgressSpinnerVisible = isProgressSpinnerVisible(),
-      submitButtonIntentOption = getSubmitButtonIntent()
+      submitButtonIntentOption = getSubmitButtonIntent(),
+      currentTimeStringOption = getCurrentTimeStringOption()
   )
 }
+
+private fun LoginState.getCurrentTimeStringOption(): Option<String> {
+  return when(this){
+    is LoginState.Entering -> currentTime.map(Date::toLocaleString)
+    is LoginState.Submitting -> currentTime.map(Date::toLocaleString)
+    is LoginState.Error -> currentTime.map(Date::toLocaleString)
+  }
+}
+
+
 
 fun LoginState.getUserName(): String {
   return when (this) {
@@ -52,14 +65,12 @@ fun LoginState.isPasswordFieldEnabled(): Boolean {
   }
 }
 
-
 fun LoginState.isUsernameFieldEnabled(): Boolean {
   return when (this) {
     is Entering -> true
     is Submitting -> false
     is Error -> true
   }
-
 
 }
 
@@ -82,7 +93,6 @@ fun LoginState.getErrorMessageOpton(): Option<String> {
     }
   }
 }
-
 
 fun LoginState.isSubmitButtonEnabled(): Boolean {
   return when (this) {

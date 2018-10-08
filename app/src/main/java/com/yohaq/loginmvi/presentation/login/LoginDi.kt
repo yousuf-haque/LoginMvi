@@ -4,6 +4,7 @@ import com.bluelinelabs.conductor.Router
 import com.yohaq.loginmvi.common.di.DataComponent
 import com.yohaq.loginmvi.common.di.scopes.ControllerScope
 import com.yohaq.loginmvi.data.AuthenticationRepository
+import com.yohaq.loginmvi.data.DateTimeRepository
 import dagger.Component
 import dagger.Module
 import dagger.Provides
@@ -26,11 +27,13 @@ class LoginModule(
 
   @Provides
   fun provideStateStream(
-    authenticationRepository: AuthenticationRepository
+    authenticationRepository: AuthenticationRepository,
+    dateTimeRepository: DateTimeRepository
   ): Observable<LoginState> {
     return buildLoginStateStream(
         intentStream,
         authenticationRepository::buildLoginRequest,
+        dateTimeRepository.currentTimeStream,
         router::buildGoToLoggedInScreenCompletable
     )
   }
