@@ -64,9 +64,7 @@ class LoginController : Controller() {
     compositeDisposable += view.getUpdateCredentialsIntentStream()
         .subscribeBy(
             onNext = { intentRelay.accept(it) },
-            onError = {
-              Log.e(TAG, "Error in login example username/password text changes", it)
-            }
+            onError = { Log.e(TAG, "Error in login example username/password text changes", it) }
         )
     compositeDisposable += viewStateStream
         .observeOn(AndroidSchedulers.mainThread())

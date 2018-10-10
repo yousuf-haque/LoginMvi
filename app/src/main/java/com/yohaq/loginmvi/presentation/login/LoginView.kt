@@ -60,8 +60,8 @@ fun LoginState.getUserName(): String {
 fun LoginState.isPasswordFieldEnabled(): Boolean {
   return when (this) {
     is Entering -> true
-    is Submitting -> false
     is Error -> true
+    is Submitting -> false
   }
 }
 
@@ -87,7 +87,6 @@ fun LoginState.getErrorMessageOpton(): Option<String> {
     is Entering -> none()
     is Submitting -> none()
     is Error -> when (error) {
-
       IncorrectCredentials -> "Incorrect credentials".some()
       NetworkError -> "Network error".some()
     }
@@ -97,8 +96,8 @@ fun LoginState.getErrorMessageOpton(): Option<String> {
 fun LoginState.isSubmitButtonEnabled(): Boolean {
   return when (this) {
     is Entering -> username.isNotBlank() && password.isNotBlank()
-    is Submitting -> false
     is Error -> username.isNotBlank() && password.isNotBlank()
+    is Submitting -> false
   }
 }
 
@@ -119,27 +118,20 @@ fun LoginState.getSubmitButtonCopy(): String {
 }
 
 fun LoginState.getSubmitButtonIntent(): Option<LoginIntent> {
+  fun buildSubmitIntent(username: String, password: String): Option<SubmitLoginIntent>{
+    return if (username.isNotBlank() && password.isNotBlank()) {
+      SubmitLoginIntent(
+          username = username,
+          password = password
+      )
+          .some()
+    } else {
+      none()
+    }
+  }
   return when (this) {
-    is Entering ->
-      if (username.isNotBlank() && password.isNotBlank()) {
-        SubmitLoginIntent(
-            username = username,
-            password = password
-        )
-            .some()
-      } else {
-        none()
-      }
+    is Entering -> buildSubmitIntent(username, password)
+    is Error -> buildSubmitIntent(username, password)
     is Submitting -> none()
-    is Error ->
-      if (username.isNotBlank() && password.isNotBlank()) {
-        SubmitLoginIntent(
-            username = username,
-            password = password
-        )
-            .some()
-      } else {
-        none()
-      }
   }
 }

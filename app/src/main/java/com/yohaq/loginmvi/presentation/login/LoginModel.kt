@@ -60,7 +60,8 @@ fun buildLoginStateStream(
       currentTime = none()
   )
 
-  val updateTimeReducerStream = getCurrentTimeReducerStream(currentTimeStream)
+  val updateTimeReducerStream: Observable<LoginExampleStateReducer> =
+    getCurrentTimeReducerStream(currentTimeStream)
 
   val intentReducerStream = intentStream.flatMap {
     getIntentReducerStream(
@@ -70,26 +71,29 @@ fun buildLoginStateStream(
     )
   }
 
-  val reducerStream: Observable<LoginExampleStateReducer> = Observable.merge(intentReducerStream, updateTimeReducerStream)
+  val reducerStream: Observable<LoginExampleStateReducer> =
+    Observable.merge(intentReducerStream, updateTimeReducerStream)
 
-  return reducerStream.scan(
-      initialState
-  ) { oldState: LoginState, reducer: LoginExampleStateReducer ->
-    val newState = reducer(oldState)
-    newState
-  }
+  return reducerStream
+      .scan(initialState) { oldState: LoginState, reducer: LoginExampleStateReducer ->
+        val newState = reducer(oldState)
+        newState
+      }
 }
 
 fun getCurrentTimeReducerStream(currentTimeStream: Observable<Date>): Observable<LoginExampleStateReducer> {
-  return currentTimeStream.map { date ->
-    { oldState: LoginState ->
-      when(oldState){
+
+  fun buildOnCurrentTimeUpdateReducer(date: Date): LoginExampleStateReducer {
+    return { oldState: LoginState ->
+      when (oldState) {
         is LoginState.Entering -> oldState.copy(currentTime = date.some())
         is LoginState.Submitting -> oldState.copy(currentTime = date.some())
         is LoginState.Error -> oldState.copy(currentTime = date.some())
       }
     }
   }
+
+  return currentTimeStream.map { buildOnCurrentTimeUpdateReducer(it) }
 }
 
 fun getIntentReducerStream(
@@ -116,27 +120,20 @@ fun buildSubmitLoginRequestReducerStream(
   loginRequestBuilder: (LoginRequest) -> Single<Try<UserInfo>>,
   buildGoToLoggedInCompletable: (userId: String) -> Completable
 ): Observable<LoginExampleStateReducer> {
+  fun buildErrorState(username: String, password: String, error: Throwable, oldTime: Option<Date>): LoginState {
+    return  Error(
+        username = username,
+        password = password,
+        error = if (error is HttpException && error.code == 400) IncorrectCredentials else NetworkError,
+        currentTime = oldTime
+    )
+  }
   fun getOnErrorStateReducer(throwable: Throwable): LoginExampleStateReducer {
     val onErrorStateReducer: LoginExampleStateReducer = { oldState ->
       when (oldState) {
-        is Entering -> Error(
-            username = intent.username,
-            password = intent.password,
-            error = if (throwable is HttpException && throwable.code == 400) IncorrectCredentials else NetworkError,
-            currentTime = oldState.currentTime
-        )
-        is Submitting -> Error(
-            username = intent.username,
-            password = intent.password,
-            error = if (throwable is HttpException && throwable.code == 400) IncorrectCredentials else NetworkError,
-            currentTime = oldState.currentTime
-        )
-        is Error -> Error(
-            username = intent.username,
-            password = intent.password,
-            error = if (throwable is HttpException && throwable.code == 400) IncorrectCredentials else NetworkError,
-            currentTime = oldState.currentTime
-        )
+        is Entering -> buildErrorState(intent.username, intent.password, throwable, oldState.currentTime)
+        is Submitting ->  buildErrorState(intent.username, intent.password, throwable, oldState.currentTime)
+        is Error -> buildErrorState(intent.username, intent.password, throwable, oldState.currentTime)
       }
     }
     return onErrorStateReducer
@@ -169,14 +166,11 @@ fun buildSubmitLoginRequestReducerStream(
         loginResult.fold(
             ifFailure = { getOnErrorStateReducer(it).just() },
             ifSuccess = {
-              buildGoToLoggedInCompletable(
-                  it.userId
-              ).toObservable<LoginExampleStateReducer>()
+              buildGoToLoggedInCompletable(it.userId).toObservable<LoginExampleStateReducer>()
             }
         )
       }
       .startWith(onSubmitStateReducer)
-
 }
 
 fun getUpdateCredentialsReducerStream(updateCredentialsIntent: UpdateCredentials): Observable<LoginExampleStateReducer> {
